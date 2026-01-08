@@ -1,0 +1,101 @@
+{
+  "5": {
+    "inputs": {
+      "api_key": "AIzaSyAIfrQmo6BYmFjgKZR1yse9FBBu6ipGEZs"
+    },
+    "class_type": "SSL_GeminiAPIKeyConfig",
+    "_meta": {
+      "title": "💠SSL Gemini API Key"
+    }
+  },
+  "7": {
+    "inputs": {
+      "prompt": [
+        "13",
+        0
+      ],
+      "model": "gemini-2.0-flash-exp",
+      "temperature": 1,
+      "top_p": 0.95,
+      "top_k": 40,
+      "max_output_tokens": 8192,
+      "include_images": "True",
+      "use_proxy": "True",
+      "proxy_host": "127.0.0.1",
+      "proxy_port": 7897,
+      "use_seed": "True",
+      "seed": 690402121,
+      "speak_and_recognation": {
+        "__value__": [
+          false,
+          true
+        ]
+      },
+      "config": [
+        "5",
+        0
+      ],
+      "input_image": [
+        "9",
+        0
+      ]
+    },
+    "class_type": "SSL_GeminiTextPrompt",
+    "_meta": {
+      "title": "💠SSL Gemini Text Prompt"
+    }
+  },
+  "9": {
+    "inputs": {
+      "image": "画板 14.jpg"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "加载图像"
+    }
+  },
+  "10": {
+    "inputs": {
+      "images": [
+        "7",
+        1
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "预览图像"
+    }
+  },
+  "13": {
+    "inputs": {
+      "from_translate": "auto",
+      "to_translate": "en",
+      "manual_translate": false,
+      "Manual Trasnlate": "Manual Trasnlate",
+      "text": "不改变垃圾桶的形状构图，盖子自己抬起来，厨房场景",
+      "speak_and_recognation": {
+        "__value__": [
+          false,
+          true
+        ]
+      }
+    },
+    "class_type": "GoogleTranslateTextNode",
+    "_meta": {
+      "title": "Google Translate Text Node"
+    }
+  },
+  "15": {
+    "inputs": {
+      "filename_prefix": "ComfyUI",
+      "images": [
+        "7",
+        1
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "保存图像"
+    }
+  }
+}
