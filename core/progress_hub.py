@@ -6,11 +6,11 @@ _clients = set()          # 只放 client['id'] 整数
 
 def _new_client(client, server):
     _clients.add(client['id'])          # 只记录 id
-    print(f"[ProgressHub] 前端接入，当前在线：{len(_clients)}")
+    pass
 
 def _client_left(client, server):
     _clients.discard(client['id'])      # 只删 id
-    print(f"[ProgressHub] 前端断开，当前在线：{len(_clients)}")
+    pass
 
 def _msg_received(client, server, msg):
     pass   # 目前纯广播，不处理上行
