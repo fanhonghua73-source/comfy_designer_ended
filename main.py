@@ -43,6 +43,21 @@ app.include_router(root.router)   #
 
 @app.on_event("startup")
 async def startup_event():
+    # 【新增】每次重启时，把上一次意外中断的任务全部标记为失败，防止占位
+    from core.database import SessionLocal
+    from core.models import TaskLog
+
+    db = SessionLocal()
+    try:
+        # 把 pending 和 running 的都改成 failed
+        db.query(TaskLog).filter(TaskLog.status.in_(['pending', 'running'])) \
+            .update({TaskLog.status: 'failed'}, synchronize_session=False)
+        db.commit()
+        print("🧹 已自动清理上次未完成的残留任务")
+    except Exception as e:
+        print(f"清理残留任务失败: {e}")
+    finally:
+        db.close()
     ws_host = settings.COMFY_URL.replace("http://", "").replace("https://", "")
     asyncio.create_task(watch_comfyui(host=ws_host))   # WebSocket 实时
     asyncio.create_task(poll_pending_tasks())          # 定时兜底
