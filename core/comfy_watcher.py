@@ -1,12 +1,46 @@
-import asyncio
-import json
-import websockets
-import os
-import shutil
-import requests
+import asyncio, aiohttp, json, os, shutil, requests, time
+from sqlalchemy.orm import Session
 from .database import SessionLocal
 from .models import TaskLog
 from core.config import settings
+import websockets
+
+# ---------- 新增：纯 HTTP 轮询 ----------
+async def poll_pending_tasks():
+    """每隔 5s 主动把所有 pending 任务拉到 history 接口查一遍"""
+    while True:
+        await asyncio.sleep(5)
+        db: Session = SessionLocal()
+        try:
+            # 只扫最近 30 分钟的任务，避免历史脏数据
+            cutoff = int(time.time()) - 30*60
+            tasks = db.query(TaskLog)\
+                      .filter(TaskLog.status == 'pending',
+                              TaskLog.created_at >= cutoff)\
+                      .all()
+            for task in tasks:
+                await check_one_task(db, task)
+        finally:
+            db.close()
+
+async def check_one_task(db: Session, task: TaskLog):
+    """真正去 ComfyUI /history 接口查状态并搬运"""
+    try:
+        url = f"{settings.COMFY_URL}/history/{task.prompt_id}"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as resp:
+                hist = await resp.json()
+        if task.prompt_id not in hist:
+            return
+        hist_item = hist[task.prompt_id]
+        ok = move_results(task, hist_item)
+        if ok:
+            task.status = "success"
+            task.progress = 100
+            db.commit()
+            print(f"✅ 轮询搬运成功：{task.prompt_id}")
+    except Exception as e:
+        print(f"轮询检查失败：{task.prompt_id} {e}")
 
 
 async def watch_comfyui(host="127.0.0.1:8188"):
@@ -58,27 +92,22 @@ async def watch_comfyui(host="127.0.0.1:8188"):
             await asyncio.sleep(5)
 
 
-def move_results(task, history_item):
-    """物理搬运逻辑"""
+def move_results(task: TaskLog, history_item):
     try:
         outputs = history_item.get("outputs", {})
         for node_id, content in outputs.items():
             if "images" in content:
                 for img in content["images"]:
-                    fname = img['filename']
+                    fname = img["filename"]
                     src = os.path.join(settings.COMFY_OUTPUT_PATH, fname)
-
-                    # 确保目标目录存在 (使用绝对路径避免混乱)
                     target_dir = os.path.join(os.getcwd(), task.output_path, "output")
                     os.makedirs(target_dir, exist_ok=True)
                     dst = os.path.join(target_dir, fname)
-
                     if os.path.exists(src):
                         shutil.copy(src, dst)
-                        # 更新为相对路径供前端展示
                         task.output_path = f"{task.output_path}/output/{fname}".replace("\\", "/")
                         return True
         return False
     except Exception as e:
-        print(f"搬运失败: {e}")
+        print("搬运失败", e)
         return False

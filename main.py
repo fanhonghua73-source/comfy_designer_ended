@@ -6,8 +6,7 @@ from fastapi.staticfiles import StaticFiles
 # 导入核心组件
 from core.config import settings
 from core.database import engine, Base
-from core.comfy_watcher import watch_comfyui
-
+from core.comfy_watcher import watch_comfyui, poll_pending_tasks
 # 导入接口路由
 from api import workflows, tasks
 
@@ -40,6 +39,14 @@ app.include_router(workflows.router)
 app.include_router(tasks.router)
 
 
+@app.on_event("startup")
+async def startup_event():
+    ws_host = settings.COMFY_URL.replace("http://", "").replace("https://", "")
+    # 1. WebSocket 监听（加速器）
+    asyncio.create_task(watch_comfyui(host=ws_host))
+    # 2. 定时轮询（兜底）
+    asyncio.create_task(poll_pending_tasks())
+    print("WebSocket + 轮询 双保险已启动")
 
 # 5. 服务启动时的钩子
 # main.py
