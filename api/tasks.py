@@ -31,3 +31,8 @@ def get_task_status(prompt_id: str, db: Session = Depends(get_db)):
         "progress": task.progress,
         "result_url": task.output_path if task.status == "success" else None
     }
+@router.get("/queue_count")
+def queue_count(db: Session = Depends(get_db)):
+    """返回还在排队的任务数（pending + running）"""
+    n = db.query(TaskLog).filter(TaskLog.status.in_(["pending", "running"])).count()
+    return {"waiting": n}

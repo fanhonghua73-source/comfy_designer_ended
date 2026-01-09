@@ -7,8 +7,9 @@ from fastapi.staticfiles import StaticFiles
 from core.config import settings
 from core.database import engine, Base
 from core.comfy_watcher import watch_comfyui, poll_pending_tasks
+from core.progress_hub import start_hub
 # 导入接口路由
-from api import workflows, tasks
+from api import workflows, tasks, auth, root
 
 # 1. 自动创建数据库表 (如果 MySQL 中不存在)
 # 注意：在生产环境建议使用 Alembic 处理数据库迁移
@@ -37,16 +38,17 @@ app.mount("/outputs", StaticFiles(directory=settings.STORAGE_ROOT), name="output
 # 4. 注册路由模块
 app.include_router(workflows.router)
 app.include_router(tasks.router)
-
+app.include_router(auth.router)   # ←
+app.include_router(root.router)   #
 
 @app.on_event("startup")
 async def startup_event():
     ws_host = settings.COMFY_URL.replace("http://", "").replace("https://", "")
-    # 1. WebSocket 监听（加速器）
-    asyncio.create_task(watch_comfyui(host=ws_host))
-    # 2. 定时轮询（兜底）
-    asyncio.create_task(poll_pending_tasks())
+    asyncio.create_task(watch_comfyui(host=ws_host))   # WebSocket 实时
+    asyncio.create_task(poll_pending_tasks())          # 定时兜底
     print("WebSocket + 轮询 双保险已启动")
+    start_hub()  # 8001 端口
+    print("进度广播中心已启动 ws://0.0.0.0:8001")
 
 # 5. 服务启动时的钩子
 # main.py
