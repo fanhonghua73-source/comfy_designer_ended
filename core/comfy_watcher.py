@@ -109,19 +109,29 @@ async def check_one_task(db: Session, task: TaskLog):
 def move_results(task: TaskLog, history_item):
     try:
         outputs = history_item.get("outputs", {})
+        # 【修改 1】增加 found_any 标记，用于代替原来直接 return True 的逻辑，确保循环能跑完
+        found_any = False
+
         for node_id, content in outputs.items():
-            if "images" in content:
-                for img in content["images"]:
-                    fname = img["filename"]
-                    src = os.path.join(settings.COMFY_OUTPUT_PATH, fname)
-                    target_dir = os.path.join(os.getcwd(), task.output_path, "output")
-                    os.makedirs(target_dir, exist_ok=True)
-                    dst = os.path.join(target_dir, fname)
-                    if os.path.exists(src):
-                        shutil.copy(src, dst)
-                        task.output_path = f"{task.output_path}/output/{fname}".replace("\\", "/")
-                        return True
-        return False
+            # 【修改 2】将原来的 if "images" in content: 改为遍历三种类型
+            for type_key in ["images", "videos", "gifs"]:
+                if type_key in content:
+                    for item in content[type_key]:
+                        fname = item["filename"]
+                        src = os.path.join(settings.COMFY_OUTPUT_PATH, fname)
+
+                        # 确保目录存在（原代码 121-122 行）
+                        target_dir = os.path.join(os.getcwd(), task.output_path, "output")
+                        os.makedirs(target_dir, exist_ok=True)
+
+                        dst = os.path.join(target_dir, fname)
+                        if os.path.exists(src):
+                            shutil.copy(src, dst)
+                            found_any = True
+                            # 【修改 3】关键！直接删除原代码第 127 行：task.output_path = ...
+                            # 绝对不要修改 task.output_path，保持它指向文件夹
+
+        return found_any
     except Exception as e:
         print(f"move_results 失败: {e}")
         return False

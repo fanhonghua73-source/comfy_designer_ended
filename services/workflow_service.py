@@ -29,9 +29,11 @@ async def run_workflow_logic(workflow_id, params, files, user):
     # 3. 参数动态注入
     for item in schema["inputs"]:
         node_id = str(item["node_id"])
-        if item["type"] == "image":
-            workflow[node_id]["inputs"]["image"] = image_filenames[img_idx]
-            img_idx += 1
+        if item["type"] in ["image", "video"]:
+            if img_idx < len(image_filenames):
+                # 关键修改：使用 item["field"] 动态决定是注入给 'image' 还是 'video' 字段
+                workflow[node_id]["inputs"][item["field"]] = image_filenames[img_idx]
+                img_idx += 1
         else:
             workflow[node_id]["inputs"][item["field"]] = params.get(item["key"])
 
